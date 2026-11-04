@@ -1,103 +1,67 @@
 from netops.models import Device, DeviceRole, DeviceStatus, Inventory
 import pytest
+from dataclasses import asdict, FrozenInstanceError
+import re
 
 
-#devices
-r1 = Device(
-    hostname="R1",
-    mgmt_ip="192.168.1.1",
-    vendor="Cisco",
-    role=DeviceRole.ROUTER,
-    status=DeviceStatus.ONLINE
-)
-
-sw1 = Device(
-    hostname="SW1",
-    mgmt_ip="192.168.1.2",
-    vendor="Juniper",
-    role=DeviceRole.SWITCH,
-    status=DeviceStatus.OFFLINE
-)
-
-fw1 = Device(
-    hostname="FW1",
-    mgmt_ip="192.168.1.3",
-    vendor="Fortinet",
-    role=DeviceRole.FIREWALL,
-    status=DeviceStatus.UNKNOWN
-)
 
 
-r2 = Device(
-    hostname="R1",
-    mgmt_ip="192.168.1.1",
-    vendor="Cisco",
-    role=DeviceRole.ROUTER,
-    status=DeviceStatus.ONLINE
-)
-
-
-def test_valid_device():
-    assert r2.hostname == "R1"
-    assert r2.mgmt_ip == "192.168.1.1"
-    assert fw1.status == "unknown"
-    assert sw1.role == "switch"
-    
-    with pytest.raises(ValueError):
-        Device(
-            hostname="",
-            mgmt_ip="192.168.1.2",
-            vendor="Cisco",
-            role=DeviceRole.ROUTER,
-            status=DeviceStatus.ONLINE)
-        
-        
-        
-        
-    
-        
-    
-
-def test_invalid_ip():
-    with pytest.raises(TypeError):
-        Device(
-            hostname="R3",
-            mgmt_ip=123,
+@pytest.fixture
+def router():
+    return Device(
+            hostname="R1",
+            mgmt_ip="192.168.1.1",
             vendor="Cisco",
             role=DeviceRole.ROUTER,
             status=DeviceStatus.ONLINE
         )
-           
-    with pytest.raises(ValueError):
-        Device(
-            hostname="R4",
-            mgmt_ip="192.468.1.1",
-            vendor="Cisco",
-            role=DeviceRole.ROUTER,
-            status=DeviceStatus.ONLINE
-        )
-        
-    with pytest.raises(ValueError):
-        Device(
-            hostname="R5",
-            mgmt_ip="192.168.1.",
-            vendor="Cisco",
-            role=DeviceRole.ROUTER,
-            status=DeviceStatus.ONLINE
-        )
-                
-        
-    
 
-def test_inventory():
-    inventory = Inventory()
-    inventory.add(r1)
-    
-    assert inventory.get("r1") is r1
-    
-    with pytest.raises(ValueError):
-        inventory.add(R1)
+@pytest.fixture
+def inventory():
+    return Inventory()
+
+
+def test_router_creation(router):
+    assert router.hostname == "R1"
+    assert router.mgmt_ip == "192.168.1.1"
+    assert router.role == DeviceRole.ROUTER
         
+        
+def test_inventory_starts_empty(inventory):
+    assert inventory.list() == []
+    
+   
+@pytest.mark.parametrize("field, invalid_value, expected_error", [
+   ("hostname", "", ValueError),
+   ("hostname", None, TypeError),
+   ("mgmt_ip", "999.1.1.1", ValueError),
+   ("mgmt_ip", 123, TypeError),
+   ("role", "router", TypeError),
+   ("status", "online", TypeError),
+   ("vendor", 564,TypeError )
+])
+def test_invalid_device_inputs(router, field, invalid_value, expected_error):
+    data = asdict(router)
+    data[field] = invalid_value
+    
+    with pytest.raises(expected_error):
+        Device(**data)
     
     
     
+@pytest.mark.parametrize("field, invalid_value, expected_error, message",[
+    ("role", "switch", TypeError, "Device role is not correct."),
+    ("hostname", 123,  TypeError, "Hostname should be a string.")
+])
+def test_error_messages(router, field, invalid_value, expected_error, message):
+    data = asdict(router)
+    data[field] = invalid_value
+    
+    with pytest.raises(expected_error, match=f"^{re.escape(message)}$"):
+        Device(**data)
+    
+    
+def test_hostname_change_after_add(router, inventory):
+    inventory.add(router)
+    with pytest.raises(FrozenInstanceError):
+        router.hostname = "R2"

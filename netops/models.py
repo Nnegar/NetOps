@@ -15,7 +15,7 @@ class DeviceRole(str, Enum):
     FIREWALL = "firewall"
     
 
-@dataclass
+@dataclass(frozen=True)
 class Device:
     hostname: str
     mgmt_ip: str
@@ -35,11 +35,14 @@ class Device:
             raise TypeError("IP address must be a string.")
         ip_address(self.mgmt_ip)
         
+        if not isinstance(self.vendor, str):
+            raise TypeError("Vendor should be a string.")
+        
         
         if not isinstance(self.role, DeviceRole):
-            raise ValueError("Device role is not correct.")
+            raise TypeError("Device role is not correct.")
         if not isinstance(self.status, DeviceStatus):
-            raise ValueError("Device status is not correct.")
+            raise TypeError("Device status is not correct.")
     
     
 

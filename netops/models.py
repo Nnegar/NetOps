@@ -55,16 +55,16 @@ class Inventory:
         if not isinstance(device, Device):
             raise TypeError("object is not of type Device.")
         
-        key = device.hostname.lower()
+        key = device.hostname.lower().strip()
         if key in self.devices:
-            raise ValueError("Hostname already exists in the inventory.")
+            raise ValueError("Device already exists in the inventory.")
         self.devices[key]=device
         
         
     def get(self, hostname):
         if not isinstance(hostname, str):
             raise TypeError("Hostname should be a string.")
-        hostname = hostname.lower()
+        hostname = hostname.lower().strip()
         if hostname in self.devices:
             return self.devices[hostname]
         return None
@@ -74,8 +74,10 @@ class Inventory:
         if not isinstance(hostname,str):
             raise TypeError("Hostname should be a string")
         
-        hostname = hostname.lower()
+        hostname = hostname.lower().strip()
         return self.devices.pop(hostname, None)
     
     def list(self):
         return(list(self.devices.values()))
+    
+    
